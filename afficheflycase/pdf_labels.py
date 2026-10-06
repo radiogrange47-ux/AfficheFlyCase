@@ -5,7 +5,9 @@ from __future__ import annotations
 import html
 import os
 import re
+import sys
 import tempfile
+import unicodedata
 from pathlib import Path
 from typing import Iterable
 
@@ -25,6 +27,13 @@ PAGE_SIZE = landscape(A4)
 PAGE_WIDTH, PAGE_HEIGHT = PAGE_SIZE
 MARGIN = 24
 INK = colors.HexColor("#202124")
+WARNING_RED = colors.HexColor("#C62828")
+APPLICATION_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
+BATTERY_ICON_PATH = APPLICATION_ROOT / "assets" / "battery_warning.png"
+LOGO_BOX_WIDTH = 204
+LOGO_WIDTH = 192
+LOGO_HEIGHT = 96
+BATTERY_MARK_WIDTH = LOGO_BOX_WIDTH
 
 
 class LabelOverflowError(ValueError):
@@ -90,6 +99,75 @@ def _value_with_unit(value: str, unit: str) -> str:
     return f"{value} {unit}"
 
 
+def _normalized_terms(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value.casefold())
+    return "".join(character for character in normalized if not unicodedata.combining(character))
+
+
+def _material_marks(case: FlyCase) -> tuple[bool, bool]:
+    material_names = " ".join(item.element for item in case.materials)
+    normalized = _normalized_terms(material_names)
+    battery = re.search(
+        r"\b(?:batter(?:ie|ies|y)|accumulateur(?:s)?|pile(?:s)?)\b",
+        normalized,
+    ) is not None
+    chemical = re.search(
+        r"\b(?:produit(?:s)?\s+chimique(?:s)?|chimique(?:s)?|chemical(?:s)?|"
+        r"solvant(?:s)?|acide(?:s)?|degraissant(?:s)?|detergent(?:s)?|nettoyant(?:s)?|"
+        r"peinture(?:s)?|vernis(?:sage)?|diluant(?:s)?|aerosol(?:s)?|resine(?:s)?|"
+        r"colle(?:s)?|huile(?:s)?|graisse(?:s)?|javel|alcool(?:s)?|desinfectant(?:s)?|"
+        r"liquide(?:s)?|lubrifiant(?:s)?)\b",
+        normalized,
+    ) is not None
+    return battery, chemical
+
+
+def _draw_battery_mark(pdf: canvas.Canvas, x: float, y: float) -> None:
+    if not BATTERY_ICON_PATH.is_file():
+        raise FileNotFoundError(f"Le pictogramme batterie est introuvable : {BATTERY_ICON_PATH}")
+    pdf.drawImage(
+        ImageReader(str(BATTERY_ICON_PATH)),
+        x + 6,
+        y,
+        width=LOGO_WIDTH,
+        height=LOGO_HEIGHT,
+        preserveAspectRatio=True,
+        anchor="c",
+        mask="auto",
+    )
+
+
+def _draw_chemical_mark(pdf: canvas.Canvas, x: float, y: float) -> None:
+    pdf.setStrokeColor(INK)
+    pdf.setLineWidth(1.8)
+    path = pdf.beginPath()
+    path.moveTo(x + 23, y + 55)
+    path.lineTo(x + 35, y + 55)
+    path.moveTo(x + 26, y + 55)
+    path.lineTo(x + 26, y + 39)
+    path.lineTo(x + 15, y + 21)
+    path.lineTo(x + 15, y + 18)
+    path.lineTo(x + 43, y + 18)
+    path.lineTo(x + 43, y + 21)
+    path.lineTo(x + 32, y + 39)
+    path.lineTo(x + 32, y + 55)
+    pdf.drawPath(path, stroke=1, fill=0)
+    pdf.line(x + 19, y + 27, x + 39, y + 27)
+    pdf.circle(x + 24, y + 31, 1.3, stroke=1, fill=0)
+    pdf.circle(x + 33, y + 34, 1.3, stroke=1, fill=0)
+    pdf.setFont("Helvetica-Bold", 7)
+    pdf.drawCentredString(x + 29, y + 7, "CHIMIQUE")
+
+
+def _warning_text(case: FlyCase) -> str:
+    messages = []
+    if case.tip.strip().upper() == "NON":
+        messages.append("NE PAS TIPER")
+    if case.stackable.strip().upper() == "NON":
+        messages.append("NE PAS GERBER")
+    return "  /  ".join(messages)
+
+
 def _draw_label(
     pdf: canvas.Canvas,
     case: FlyCase,
@@ -107,8 +185,15 @@ def _draw_label(
 
     id_height = 110
     id_bottom = top - id_height
-    logo_box_width = 204 if logo_path else 0
-    id_text_width = width - 28 - logo_box_width
+    battery_mark, chemical_mark = _material_marks(case)
+    marks = []
+    if battery_mark:
+        marks.append((_draw_battery_mark, BATTERY_MARK_WIDTH))
+    if chemical_mark:
+        marks.append((_draw_chemical_mark, 58))
+    logo_box_width = LOGO_BOX_WIDTH if logo_path else 0
+    marks_width = sum(mark_width for _, mark_width in marks) + max(0, len(marks) - 1) * 6
+    id_text_width = width - 28 - logo_box_width - marks_width - (8 if marks else 0)
     id_size = _fit_single_line(case.identifier, 72, 48, id_text_width)
     pdf.setFont("Helvetica-Bold", id_size)
     pdf.setFillColor(INK)
@@ -118,12 +203,17 @@ def _draw_label(
             ImageReader(str(logo_path)),
             right - 14 - 192,
             top - id_height + 7,
-            width=192,
-            height=id_height - 14,
+            width=LOGO_WIDTH,
+            height=LOGO_HEIGHT,
             preserveAspectRatio=True,
             anchor="c",
             mask="auto",
         )
+    marks_right = right - 14 - logo_box_width - (8 if logo_box_width else 0)
+    for draw_mark, mark_width in marks:
+        marks_right -= mark_width
+        draw_mark(pdf, marks_right, id_bottom + (7 if draw_mark is _draw_battery_mark else 14))
+        marks_right -= 6
     pdf.line(left, id_bottom, right, id_bottom)
 
     info_top = id_bottom
@@ -220,8 +310,11 @@ def _draw_label(
 
     content_top = detail_bottom
     inset = 14
+    warning = _warning_text(case)
+    warning_height = 76 if warning else 0
     comments_height = min(64, max(40, 27 + case.comment.count("\n") * 12)) if case.comment else 0
-    comments_top = MARGIN + comments_height
+    content_bottom = MARGIN + warning_height
+    comments_top = content_bottom + comments_height
     pdf.line(left, comments_top, right, comments_top)
     if case.comment:
         _paragraph(
@@ -234,6 +327,18 @@ def _draw_label(
             font_size=11,
             min_font_size=10,
         )
+    if warning:
+        pdf.setFillColor(WARNING_RED)
+        pdf.rect(left, MARGIN, width, warning_height, stroke=0, fill=1)
+        warning_size = _fit_single_line(warning, 48, 28, width - 24)
+        pdf.setFillColor(colors.white)
+        pdf.setFont("Helvetica-Bold", warning_size)
+        pdf.drawCentredString(
+            PAGE_WIDTH / 2,
+            MARGIN + (warning_height - warning_size) / 2 + 2,
+            warning,
+        )
+        pdf.setFillColor(INK)
     pdf.line(left, content_top, right, content_top)
     available_height = content_top - comments_top - 24
     material_lines = []

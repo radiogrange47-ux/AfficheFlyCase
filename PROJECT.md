@@ -61,8 +61,8 @@ Les colonnes B à L doivent être présentes dans cet ordre :
 | G | `Hauteur` | Hauteur avec l’unité du classeur. |
 | H | `Empatement` | Empattement, s’il est renseigné. |
 | I | `Cubage` | Volume, s’il est renseigné. |
-| J | `Tip` | Colonne requise pour reconnaître le modèle, jamais affichée. |
-| K | `Gerbable` | Colonne requise pour reconnaître le modèle, jamais affichée. |
+| J | `Tip` | `NON` affiche un avertissement « NE PAS TIPER » ; les autres valeurs n’affichent pas de statut positif. |
+| K | `Gerbable` | `NON` affiche un avertissement « NE PAS GERBER » ; les autres valeurs n’affichent pas de statut positif. |
 | L | `Commentaire` | Commentaire associé au fly case, s’il est renseigné. |
 
 Les dimensions affichées proviennent des colonnes E à G et conservent les unités explicites ; lorsque l’unité est absente, elles sont considérées en centimètres. L’empattement est affiché en m² et le cubage en m³ lorsqu’ils sont renseignés. L’onglet `Listing FlyCase` fait foi pour la liste des fly cases et leurs caractéristiques : chaque fiche avec un ID peut donner lieu à une étiquette, même si aucun élément de `Listing Materiel` ne lui est associé. Les éléments de l’onglet 1 sont ajoutés à l’étiquette correspondante par l’ID ; la désignation textuelle complète de la colonne F ne remplace pas les valeurs de la fiche `Listing FlyCase`.
@@ -75,7 +75,7 @@ Les dimensions affichées proviennent des colonnes E à G et conservent les unit
 - Si le fichier ne correspond pas au modèle, afficher un message du type : **« Fichier Excel non conforme : onglet “Listing FlyCase” manquant. Vérifiez que vous avez sélectionné le listing matériel attendu. »** Le message doit préciser le problème détecté (format illisible/non pris en charge, onglet manquant ou inattendu, en-tête manquant, ou données incohérentes) et indiquer, si possible, la feuille, la cellule et la valeur concernées. Ne pas générer de PDF à partir d’un import refusé.
 - Refuser les IDs de fly case absents ou en double dans `Listing FlyCase`. Pour une ligne de matériel qui a un élément mais pas d’attribution de fly case (colonne F vide, désignation sans ID valide ou ID absent de `Listing FlyCase`), afficher une erreur d’affectation **distincte pour chaque matériel**, avec le numéro de ligne, sa désignation, sa quantité/position si disponibles et la cause. Présenter le détail dans un onglet « Erreurs d’affectation » et avertir l’utilisateur à l’import. Ignorer ces éléments non affectés pour la création des étiquettes, sans bloquer la génération des fly cases correctement identifiés.
 - Ignorer les lignes entièrement vides, y compris celles qui se trouvent dans une plage de cellules fusionnées et dont les cellules afficheraient autrement la valeur de la ligne précédente. Ignorer également les lignes de total/sous-total et les lignes qui répètent les en-têtes des colonnes ; elles ne représentent pas des éléments ou des fiches et leurs éventuelles formules de calcul ne doivent pas bloquer l’import. Ne pas inventer les valeurs absentes ; signaler les champs de contenu ou de fiche manquants dans l’aperçu.
-- Les colonnes `Tip` et `Gerbable` restent requises dans le modèle Excel, mais leurs valeurs ne sont pas interprétées, validées ni affichées.
+- Les colonnes `Tip` et `Gerbable` restent requises dans le modèle Excel. La valeur `NON` déclenche le bandeau d’avertissement correspondant ; aucun statut positif n’est affiché.
 - Les formules Excel ne doivent pas être exécutées. Si une valeur attendue est une formule sans résultat exploitable, signaler la cellule et demander à l’utilisateur de vérifier/recalculer le classeur dans Excel.
 - L’application ne doit ni exécuter les macros d’un fichier `.xlsm`, ni enregistrer de modification dans le classeur.
 - Si une donnée est trop longue pour la zone prévue, adapter la composition sans la couper ; si elle ne peut toujours pas tenir avec une taille lisible, avertir l’utilisateur et empêcher une génération qui masquerait l’information.
@@ -87,19 +87,23 @@ Les dimensions affichées proviennent des colonnes E à G et conservent les unit
 - Une page **A4 paysage** par fly case (297 × 210 mm), conforme au format A4 de la série définie par l’ISO 216.
 - Mise en page à bordure visible, avec marges de sécurité de l’ordre de 8 à 10 mm afin de limiter les risques de rognage à l’impression.
 - Composition inspirée de l’image de référence, sans reproduire sa marque ni son adresse :
-  1. **Première ligne** : ID du fly case en gros caractères à gauche ; logo mémorisé en haut à droite.
+  1. **Première ligne** : ID du fly case en gros caractères à gauche ; pictogrammes d’identification batterie et/ou produit chimique détectés dans le contenu, immédiatement à gauche du logo mémorisé en haut à droite.
   2. **Trois cases** : production, date/période et lieu/salle.
   3. **Bandeau des caractéristiques** : dimensions, puis empattement (m²) et cubage (m³), sans répéter leurs noms. Ne pas afficher le type du contenant ni sa couleur.
   4. **Zone principale “CONTENU”** : liste des éléments et de leurs quantités/positions.
-  5. **Section “COMMENTAIRES”** séparée en bas de l’étiquette. Les fragments de commentaire relatifs au basculement, au gerbage ou à l’empilement sont retirés.
+  5. **Section “COMMENTAIRES”** séparée en bas de l’étiquette, au-dessus de l’avertissement éventuel. Les fragments de commentaire relatifs au basculement, au gerbage ou à l’empilement sont retirés.
+  6. **Avertissement de manutention** : afficher « NE PAS TIPER » lorsque `Tip` vaut `NON`, « NE PAS GERBER » lorsque `Gerbable` vaut `NON`, ou les deux si les deux conditions sont réunies. Aucun bandeau n’est affiché si aucune valeur n’est `NON`.
+
+Le logo batterie fourni par l’utilisateur est affiché à partir d’une ressource PNG incluse dans l’exécutable. Il utilise le même cadre que le logo de production (192 × 96 pt), avec conservation de ses proportions. Le pictogramme chimique reste un repère générique. Ces pictogrammes sont des repères de contenu, pas des pictogrammes réglementaires de danger (GHS/CLP) ni une détermination de classe de transport. La détection s’appuie sur les désignations du matériel ; elle n’infère pas un niveau de danger.
 
 ### Hiérarchie typographique et lisibilité
 
 Tailles indicatives à ajuster lors des essais d’impression ; la priorité est de rester lisible et de faire tenir toutes les informations :
 
-1. **ID du fly case** : environ 72 pt, gras, première ligne, contraste élevé.
+1. **Bandeau « NE PAS TIPER / NE PAS GERBER »** : 76 pt de hauteur, texte gras jusqu’à 48 pt, ajusté uniquement si un avertissement combiné doit tenir dans la largeur.
+2. **ID du fly case** : environ 72 pt, gras, première ligne, contraste élevé.
 3. **Nom du show / production** : environ 15–18 pt, gras, dans la case « Production ».
-4. **Titres des zones, dimensions et statuts** : environ 10–14 pt, avec libellés explicites seulement lorsque nécessaires.
+4. **Titres des zones et dimensions** : environ 10–14 pt, avec libellés explicites seulement lorsque nécessaires.
 5. **Contenu, commentaires, dates et lieu** : environ 11–14 pt selon la quantité de texte.
 
 Ces valeurs sont des points de départ, non des tailles fixes. La typographie doit conserver une hiérarchie nette, un contraste suffisant et des libellés écrits : ne jamais communiquer un statut uniquement par une couleur ou une icône. Lorsqu’une zone contient beaucoup de texte, réduire d’abord les espacements et optimiser les retours à la ligne ; diminuer ensuite la police jusqu’à un minimum cible de 10 pt. Au-delà de cette limite, signaler le problème plutôt que produire une étiquette illisible.
@@ -136,9 +140,9 @@ Ces valeurs sont des points de départ, non des tailles fixes. La typographie do
 3. Pour chaque ligne sélectionnée contenant un fly case valide, le PDF produit exactement une page A4 paysage.
 4. Les éléments de `Listing Materiel` sont associés à la fiche correspondante de `Listing FlyCase` par leur ID ; les valeurs de colonnes B à E fusionnées sont appliquées à chaque ligne fusionnée et aucune association de la colonne F n’est perdue.
 5. Les dimensions apparaissent avant les valeurs d’empattement et de cubage, sans répéter le nom de ces deux mesures ; type et couleur sont absents de l’étiquette.
-6. Aucun statut de manutention (Tip, Gerbable ou basculable) n’apparaît dans les étiquettes, l’aperçu ni les commentaires.
+6. Le logo batterie fourni et/ou le repère chimique apparaît à gauche du logo de l’étiquette lorsque la désignation d’un contenu correspond aux termes détectés ; les ressources nécessaires sont incluses dans l’exécutable et ces pictogrammes ne prétendent pas signaler une classe de danger réglementaire.
 7. Les commentaires sont dans leur propre section en bas ; les commentaires de manutention sont exclus.
-8. Les statuts de basculement et de gerbage sont traités indépendamment ; « ne pas basculer » déclenche un avertissement très visible.
+8. Les valeurs `NON` des colonnes Tip et Gerbable déclenchent respectivement les avertissements « NE PAS TIPER » et « NE PAS GERBER » ; les valeurs positives n’affichent pas de statut.
 9. Un contenu long ne déborde pas, n’est pas tronqué silencieusement et déclenche une alerte s’il ne peut tenir de façon lisible.
 10. L’aperçu et le PDF ne présentent ni texte coupé, ni page supplémentaire, ni mise à l’échelle qui change le format A4.
 11. Le `.exe` démarre et génère un PDF sur un poste Windows où Python n’est pas installé.

@@ -36,7 +36,8 @@ if ($LASTEXITCODE -ne 0) { throw "Échec de mise à jour de pip." }
 & $Python -m pip install -r requirements.txt
 if ($LASTEXITCODE -ne 0) { throw "Échec d'installation des dépendances." }
 & $Python -m PyInstaller --noconfirm --onefile --windowed --name AfficheFlyCase `
-    --collect-all reportlab --collect-all openpyxl app.py
+    --collect-all reportlab --collect-all openpyxl `
+    --add-data "assets\battery_warning.png;assets" app.py
 if ($LASTEXITCODE -ne 0) { throw "Échec de création de l'exécutable." }
 
 Write-Host "Exécutable créé : $Root\dist\AfficheFlyCase.exe"

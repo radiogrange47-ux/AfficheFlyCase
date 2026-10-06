@@ -48,7 +48,7 @@ def make_workbook(
     flycases.append(["", "ID", "Type2", "Couleur", "Largeur", "Longeur", "Hauteur",
                      "Empatement", "Cubage", "Tip", "Gerbable", "Commentaire"])
     flycases.append(["", "LX01", "Fly Case", "Noir", "120 cm", "60 cm", "63 cm",
-                     "0,7", "0,45", "OK", "OK", "Fragile / Gerbable"])
+                     "0,7", "0,45", "NON", "OK", "Fragile / Gerbable"])
     flycases.append(["", "LX02", "Fly Case", "Bleu", "50", "40", "30",
                      "-", "0,06", "OK", "NON", ""])
     if total_rows:
@@ -73,6 +73,9 @@ class WorkbookImportTests(unittest.TestCase):
         self.assertEqual(result.cases[0].dimensions, "120 cm × 60 cm × 63 cm")
         self.assertEqual(result.cases[1].dimensions, "50 cm × 40 cm × 30 cm")
         self.assertEqual(result.cases[0].comment, "Fragile")
+        self.assertEqual(result.cases[0].tip, "NON")
+        self.assertEqual(result.cases[0].stackable, "OK")
+        self.assertEqual(result.cases[1].stackable, "NON")
         self.assertEqual(result.cases[0].footprint, "0,7")
         self.assertEqual(result.unassigned_materials, [])
 

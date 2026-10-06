@@ -99,6 +99,8 @@ class FlyCase:
     comment: str
     source_row: int
     materials: list[MaterialItem] = field(default_factory=list)
+    tip: str = ""
+    stackable: str = ""
 
     @property
     def dimensions(self) -> str:
@@ -291,6 +293,8 @@ def load_flycases(path: str | Path) -> WorkbookImportResult:
                 height=_text(values[5]),
                 footprint=_text(values[6]),
                 volume=_text(values[7]),
+                tip=_text(values[8]),
+                stackable=_text(values[9]),
                 comment=clean_comment(_text(values[10])),
                 source_row=row,
             )
