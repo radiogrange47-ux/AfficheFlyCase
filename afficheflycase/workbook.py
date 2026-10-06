@@ -6,6 +6,7 @@ import re
 import unicodedata
 import zipfile
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
 
@@ -142,6 +143,22 @@ def _with_unit(value: str, unit: str, accepted_units: str) -> str:
     if re.search(rf"(?:{accepted_units})\s*$", value, flags=re.IGNORECASE):
         return value
     return f"{value} {unit}"
+
+
+def format_measure(value: str, unit: str) -> str:
+    value = value.strip()
+    if not value or value == "-":
+        return value
+    numeric_value = re.sub(r"\s*m(?:\^?[23]|[²³])\s*$", "", value, flags=re.IGNORECASE)
+    try:
+        rounded = Decimal(numeric_value.replace(",", ".")).quantize(
+            Decimal("0.1"), rounding=ROUND_HALF_UP
+        )
+    except InvalidOperation:
+        if numeric_value != value:
+            return f"{numeric_value} {unit}"
+        return f"{value} {unit}"
+    return f"{rounded:.1f}".replace(".", ",") + f" {unit}"
 
 
 def clean_comment(value: str) -> str:

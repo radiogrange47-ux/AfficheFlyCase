@@ -5,7 +5,7 @@ from pathlib import Path
 from openpyxl import Workbook
 
 from afficheflycase.pdf_labels import generate_pdf
-from afficheflycase.workbook import WorkbookFormatError, clean_comment, load_flycases
+from afficheflycase.workbook import WorkbookFormatError, clean_comment, format_measure, load_flycases
 
 
 def make_workbook(
@@ -101,6 +101,12 @@ class WorkbookImportTests(unittest.TestCase):
             clean_comment("Batteries / non gerbable; fragile — tipable"),
             "Batteries — fragile",
         )
+
+    def test_rounds_measures_to_one_decimal_and_keeps_empty_values(self):
+        self.assertEqual(format_measure("0,49 m²", "m²"), "0,5 m²")
+        self.assertEqual(format_measure("1.24", "m³"), "1,2 m³")
+        self.assertEqual(format_measure("1.25", "m³"), "1,3 m³")
+        self.assertEqual(format_measure("-", "m²"), "-")
 
     def test_multiple_flycase_assignments_list_the_other_cases(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -18,7 +18,13 @@ from afficheflycase.settings import (
     settings_directory,
     store_logo,
 )
-from afficheflycase.workbook import FlyCase, WorkbookFormatError, WorkbookImportResult, load_flycases
+from afficheflycase.workbook import (
+    FlyCase,
+    WorkbookFormatError,
+    WorkbookImportResult,
+    format_measure,
+    load_flycases,
+)
 
 
 def default_pdf_filename(production: str) -> str:
@@ -303,9 +309,9 @@ class AfficheFlyCaseApp:
             f"Dimensions : {case.dimensions}",
         ]
         if case.footprint:
-            lines.append(case.footprint)
+            lines.append(format_measure(case.footprint, "m²"))
         if case.volume:
-            lines.append(case.volume)
+            lines.append(format_measure(case.volume, "m³"))
         if case.materials:
             lines.extend(("", "CONTENU"))
             for item in case.materials:

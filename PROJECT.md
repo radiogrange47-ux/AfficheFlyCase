@@ -65,7 +65,7 @@ Les colonnes B à L doivent être présentes dans cet ordre :
 | K | `Gerbable` | `NON` affiche un avertissement « NE PAS GERBER » ; les autres valeurs n’affichent pas de statut positif. |
 | L | `Commentaire` | Commentaire associé au fly case, s’il est renseigné. |
 
-Les dimensions affichées proviennent des colonnes E à G et conservent les unités explicites ; lorsque l’unité est absente, elles sont considérées en centimètres. L’empattement est affiché en m² et le cubage en m³ lorsqu’ils sont renseignés. L’onglet `Listing FlyCase` fait foi pour la liste des fly cases et leurs caractéristiques : chaque fiche avec un ID peut donner lieu à une étiquette, même si aucun élément de `Listing Materiel` ne lui est associé. Les éléments de l’onglet 1 sont ajoutés à l’étiquette correspondante par l’ID ; la désignation textuelle complète de la colonne F ne remplace pas les valeurs de la fiche `Listing FlyCase`.
+Les dimensions affichées proviennent des colonnes E à G et conservent les unités explicites ; lorsque l’unité est absente, elles sont considérées en centimètres. L’empattement est affiché en m² et le cubage en m³, arrondis à une décimale avec une virgule, lorsqu’ils sont renseignés. L’onglet `Listing FlyCase` fait foi pour la liste des fly cases et leurs caractéristiques : chaque fiche avec un ID peut donner lieu à une étiquette, même si aucun élément de `Listing Materiel` ne lui est associé. Les éléments de l’onglet 1 sont ajoutés à l’étiquette correspondante par l’ID ; la désignation textuelle complète de la colonne F ne remplace pas les valeurs de la fiche `Listing FlyCase`.
 
 ### Validation du fichier et erreurs
 

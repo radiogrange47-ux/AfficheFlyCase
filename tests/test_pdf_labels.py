@@ -91,7 +91,18 @@ class PdfLabelTests(unittest.TestCase):
         self.assertIn(b"batteries", page_text)
         self.assertIn(b"fragile", page_text)
         self.assertIn(b"0,6 m\\262", page_text)
-        self.assertIn(b"0,49 m\\263", page_text)
+        self.assertIn(b"0,5 m\\263", page_text)
+
+    def test_rounds_footprint_and_volume_to_one_decimal(self):
+        case = self.make_case()
+        case.footprint = "0,74"
+        case.volume = "0.46 m^3"
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "labels.pdf"
+            generate_pdf(output, [case], "Show", "Dates", "Lieu")
+            page_text = b"\n".join(pdf_text_streams(output.read_bytes())).lower()
+        self.assertIn(b"0,7 m\\262", page_text)
+        self.assertIn(b"0,5 m\\263", page_text)
 
     def test_draws_battery_and_chemical_marks_when_materials_match(self):
         case = self.make_case()

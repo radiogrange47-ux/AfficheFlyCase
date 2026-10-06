@@ -20,7 +20,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph
 
-from .workbook import FlyCase
+from .workbook import FlyCase, format_measure
 
 
 PAGE_SIZE = landscape(A4)
@@ -89,14 +89,6 @@ def _fit_single_line(text: str, preferred: int, min_size: int, max_width: float)
         if stringWidth(text, "Helvetica-Bold", size) <= max_width:
             return size
     raise LabelOverflowError(f"Le texte « {text} » est trop long pour tenir sur une ligne.")
-
-
-def _value_with_unit(value: str, unit: str) -> str:
-    value = value.strip()
-    if not value or value == "-":
-        return value
-    value = re.sub(r"\s*m(?:\^?[23]|[²³])\s*$", "", value, flags=re.IGNORECASE)
-    return f"{value} {unit}"
 
 
 def _normalized_terms(value: str) -> str:
@@ -256,8 +248,8 @@ def _draw_label(
     pdf.line(left, detail_bottom, right, detail_bottom)
     detail_values = [
         ("DIMENSIONS", case.dimensions),
-        ("", _value_with_unit(case.footprint, "m²")),
-        ("", _value_with_unit(case.volume, "m³")),
+        ("", format_measure(case.footprint, "m²")),
+        ("", format_measure(case.volume, "m³")),
     ]
     detail_widths = (width * 0.50, width * 0.25, width * 0.25)
     detail_lefts = (left, left + detail_widths[0], left + detail_widths[0] + detail_widths[1])
