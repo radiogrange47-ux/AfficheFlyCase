@@ -61,11 +61,11 @@ Les colonnes B à L doivent être présentes dans cet ordre :
 | G | `Hauteur` | Hauteur avec l’unité du classeur. |
 | H | `Empatement` | Empattement, s’il est renseigné. |
 | I | `Cubage` | Volume, s’il est renseigné. |
-| J | `Tip` | `OK` signifie basculable ; `NON` signifie ne pas basculer. |
-| K | `Gerbable` | `OK` signifie gerbable ; `NON` signifie non gerbable. |
+| J | `Tip` | Colonne requise pour reconnaître le modèle, jamais affichée. |
+| K | `Gerbable` | Colonne requise pour reconnaître le modèle, jamais affichée. |
 | L | `Commentaire` | Commentaire associé au fly case, s’il est renseigné. |
 
-Les dimensions affichées proviennent des colonnes E à G et conservent leurs valeurs et unités. L’empattement et le cubage sont affichés en complément lorsqu’ils sont renseignés. L’onglet `Listing FlyCase` fait foi pour la liste des fly cases et leurs caractéristiques : chaque fiche avec un ID peut donner lieu à une étiquette, même si aucun élément de `Listing Materiel` ne lui est associé. Les éléments de l’onglet 1 sont ajoutés à l’étiquette correspondante par l’ID ; la désignation textuelle complète de la colonne F ne remplace pas les valeurs de la fiche `Listing FlyCase`.
+Les dimensions affichées proviennent des colonnes E à G et conservent les unités explicites ; lorsque l’unité est absente, elles sont considérées en centimètres. L’empattement est affiché en m² et le cubage en m³ lorsqu’ils sont renseignés. L’onglet `Listing FlyCase` fait foi pour la liste des fly cases et leurs caractéristiques : chaque fiche avec un ID peut donner lieu à une étiquette, même si aucun élément de `Listing Materiel` ne lui est associé. Les éléments de l’onglet 1 sont ajoutés à l’étiquette correspondante par l’ID ; la désignation textuelle complète de la colonne F ne remplace pas les valeurs de la fiche `Listing FlyCase`.
 
 ### Validation du fichier et erreurs
 
@@ -73,9 +73,9 @@ Les dimensions affichées proviennent des colonnes E à G et conservent leurs va
 - Avant toute génération, vérifier l’extension et la lisibilité du classeur, la présence des deux onglets attendus dans le bon ordre, les en-têtes requis en ligne 2 et l’existence d’au moins une fiche de fly case avec un ID.
 - Refuser l’import si un onglet est absent/mal nommé ou si un en-tête requis est absent, déplacé ou différent du modèle. Ne pas essayer de deviner ou de substituer silencieusement une autre feuille ou colonne.
 - Si le fichier ne correspond pas au modèle, afficher un message du type : **« Fichier Excel non conforme : onglet “Listing FlyCase” manquant. Vérifiez que vous avez sélectionné le listing matériel attendu. »** Le message doit préciser le problème détecté (format illisible/non pris en charge, onglet manquant ou inattendu, en-tête manquant, ou données incohérentes) et indiquer, si possible, la feuille, la cellule et la valeur concernées. Ne pas générer de PDF à partir d’un import refusé.
-- Refuser les IDs de fly case absents ou en double dans `Listing FlyCase`, les désignations de la colonne F dont aucun ID ne peut être extrait, ainsi que les IDs de matériel qui ne correspondent à aucune fiche. Le message doit permettre de localiser la ligne en cause.
-- Ignorer les lignes entièrement vides. Ne pas inventer les valeurs absentes ; signaler les champs de contenu ou de fiche manquants dans l’aperçu.
-- Interpréter les valeurs de `Tip` et `Gerbable` indépendamment : `OK` et `NON` sont les valeurs reconnues. Une valeur non vide différente doit être signalée comme incohérente et bloquer la génération jusqu’à correction du fichier. Une cellule vide est un statut inconnu, à signaler sans la transformer en `OK` ou `NON`.
+- Refuser les IDs de fly case absents ou en double dans `Listing FlyCase`. Pour une ligne de matériel qui a un élément mais pas d’attribution de fly case (colonne F vide, désignation sans ID valide ou ID absent de `Listing FlyCase`), afficher une erreur d’affectation **distincte pour chaque matériel**, avec le numéro de ligne, sa désignation, sa quantité/position si disponibles et la cause. Présenter le détail dans un onglet « Erreurs d’affectation » et avertir l’utilisateur à l’import. Ignorer ces éléments non affectés pour la création des étiquettes, sans bloquer la génération des fly cases correctement identifiés.
+- Ignorer les lignes entièrement vides, y compris celles qui se trouvent dans une plage de cellules fusionnées et dont les cellules afficheraient autrement la valeur de la ligne précédente. Ignorer également les lignes de total/sous-total et les lignes qui répètent les en-têtes des colonnes ; elles ne représentent pas des éléments ou des fiches et leurs éventuelles formules de calcul ne doivent pas bloquer l’import. Ne pas inventer les valeurs absentes ; signaler les champs de contenu ou de fiche manquants dans l’aperçu.
+- Les colonnes `Tip` et `Gerbable` restent requises dans le modèle Excel, mais leurs valeurs ne sont pas interprétées, validées ni affichées.
 - Les formules Excel ne doivent pas être exécutées. Si une valeur attendue est une formule sans résultat exploitable, signaler la cellule et demander à l’utilisateur de vérifier/recalculer le classeur dans Excel.
 - L’application ne doit ni exécuter les macros d’un fichier `.xlsm`, ni enregistrer de modification dans le classeur.
 - Si une donnée est trop longue pour la zone prévue, adapter la composition sans la couper ; si elle ne peut toujours pas tenir avec une taille lisible, avertir l’utilisateur et empêcher une génération qui masquerait l’information.
@@ -87,28 +87,22 @@ Les dimensions affichées proviennent des colonnes E à G et conservent leurs va
 - Une page **A4 paysage** par fly case (297 × 210 mm), conforme au format A4 de la série définie par l’ISO 216.
 - Mise en page à bordure visible, avec marges de sécurité de l’ordre de 8 à 10 mm afin de limiter les risques de rognage à l’impression.
 - Composition inspirée de l’image de référence, sans reproduire sa marque ni son adresse :
-  1. **En-tête pleine largeur** : nom du show / production, puis date(s) et lieu.
-  2. **Bandeau d’informations logistiques** : ID du fly, dimensions et statuts de manutention ; poids, zone de scène et case « Checked » si disponibles ou utiles.
-  3. **Grande zone “CONTENU / REMARQUES”** : contenu et commentaires clairement séparés et faciles à lire.
-  4. **Avertissement de basculement** : bandeau rouge en bas lorsque le fly case ne doit pas être basculé ; aucun bandeau d’interdiction si le statut est autorisé ou inconnu.
+  1. **Première ligne** : ID du fly case en gros caractères à gauche ; logo mémorisé en haut à droite.
+  2. **Trois cases** : production, date/période et lieu/salle.
+  3. **Bandeau des caractéristiques** : dimensions, puis empattement (m²) et cubage (m³), sans répéter leurs noms. Ne pas afficher le type du contenant ni sa couleur.
+  4. **Zone principale “CONTENU”** : liste des éléments et de leurs quantités/positions.
+  5. **Section “COMMENTAIRES”** séparée en bas de l’étiquette. Les fragments de commentaire relatifs au basculement, au gerbage ou à l’empilement sont retirés.
 
 ### Hiérarchie typographique et lisibilité
 
 Tailles indicatives à ajuster lors des essais d’impression ; la priorité est de rester lisible et de faire tenir toutes les informations :
 
-1. **Avertissement “NE PAS BASCULER / DO NOT TIP”** : environ 32–44 pt, capitales, gras, texte clair sur fond rouge.
-2. **ID du fly case** : environ 24–32 pt, gras, contraste élevé.
-3. **Nom du show / production** : environ 20–28 pt, gras.
-4. **Titres des zones, dimensions et statuts** : environ 14–18 pt, avec libellés explicites.
+1. **ID du fly case** : environ 72 pt, gras, première ligne, contraste élevé.
+3. **Nom du show / production** : environ 15–18 pt, gras, dans la case « Production ».
+4. **Titres des zones, dimensions et statuts** : environ 10–14 pt, avec libellés explicites seulement lorsque nécessaires.
 5. **Contenu, commentaires, dates et lieu** : environ 11–14 pt selon la quantité de texte.
 
 Ces valeurs sont des points de départ, non des tailles fixes. La typographie doit conserver une hiérarchie nette, un contraste suffisant et des libellés écrits : ne jamais communiquer un statut uniquement par une couleur ou une icône. Lorsqu’une zone contient beaucoup de texte, réduire d’abord les espacements et optimiser les retours à la ligne ; diminuer ensuite la police jusqu’à un minimum cible de 10 pt. Au-delà de cette limite, signaler le problème plutôt que produire une étiquette illisible.
-
-### Consignes de manutention
-
-- La colonne `Tip` détermine le bandeau de basculement : `NON` déclenche le bandeau rouge « NE PAS BASCULER / DO NOT TIP » ; `OK` affiche « BASCULABLE ». Le statut doit être impossible à confondre avec le statut de gerbage.
-- La colonne `Gerbable` détermine un statut séparé, sous forme textuelle explicite : `GERBABLE` pour `OK` et `NON GERBABLE` pour `NON`.
-- Un statut absent, vide ou non reconnu est **inconnu** : ne pas le convertir en « oui » ou « non ». Le signaler dans l’aperçu et, si nécessaire, imprimer « STATUT À VÉRIFIER ».
 
 ## 6. Sortie et impression
 
@@ -124,7 +118,9 @@ Ces valeurs sont des points de départ, non des tailles fixes. La typographie do
 - Sélection du fichier Excel au moyen d’un sélecteur de fichiers ; afficher le chemin retenu et permettre de le remplacer.
 - Étapes clairement visibles : fichier et feuille, correspondance des colonnes, informations du show, sélection/aperçu, génération.
 - Aucune connexion Internet ne doit être nécessaire à l’utilisation courante ; les données des classeurs ne sont pas envoyées à un service externe.
-- Les paramètres de correspondance peuvent être mémorisés localement pour faciliter les générations suivantes, avec possibilité de les modifier. Ne pas conserver les données métier du classeur sans nécessité.
+- Mémoriser localement le dernier nom du show, les dates/période et le lieu/salle saisis ; les préremplir au lancement suivant et les sauvegarder automatiquement lorsqu’ils changent.
+- Permettre à l’utilisateur de sélectionner un logo PNG ou JPEG depuis une fenêtre de fichiers. Copier l’image choisie dans le dossier de données utilisateur AfficheFlyCase et mémoriser son emplacement afin de la conserver même si le fichier original est déplacé. Inclure le logo, proportionnellement et sans déformation, dans la zone d’en-tête de chaque étiquette et réserver l’espace nécessaire pour éviter le chevauchement avec les textes.
+- Prévoir une action pour supprimer le logo mémorisé. Les préférences et la copie du logo résident sur l’ordinateur de l’utilisateur ; elles ne sont pas intégrées au classeur Excel et ne sont pas envoyées à un service externe.
 
 ## 8. Livrable Windows
 
@@ -136,15 +132,19 @@ Ces valeurs sont des points de départ, non des tailles fixes. La typographie do
 ## 9. Critères d’acceptation
 
 1. L’utilisateur peut sélectionner un fichier Excel conforme au modèle, qui est importé depuis ses deux premiers onglets sans modifier le classeur.
-2. Les champs de production sont demandés avant la génération et apparaissent sur chaque page.
+2. L’ID apparaît en première ligne avec le logo à droite ; production, date et lieu apparaissent chacun dans leur case dédiée.
 3. Pour chaque ligne sélectionnée contenant un fly case valide, le PDF produit exactement une page A4 paysage.
 4. Les éléments de `Listing Materiel` sont associés à la fiche correspondante de `Listing FlyCase` par leur ID ; les valeurs de colonnes B à E fusionnées sont appliquées à chaque ligne fusionnée et aucune association de la colonne F n’est perdue.
-5. L’ID, les dimensions, le contenu, les commentaires et les statuts importés sont restitués fidèlement.
-6. Les statuts de basculement et de gerbage sont traités indépendamment ; « ne pas basculer » déclenche un avertissement très visible.
-7. Un contenu long ne déborde pas, n’est pas tronqué silencieusement et déclenche une alerte s’il ne peut tenir de façon lisible.
-8. L’aperçu et le PDF ne présentent ni texte coupé, ni page supplémentaire, ni mise à l’échelle qui change le format A4.
-9. Le `.exe` démarre et génère un PDF sur un poste Windows où Python n’est pas installé.
-10. Un classeur illisible ou non conforme (mauvais onglets, ordre ou en-têtes) provoque un message d’erreur précis et aucune génération ; les erreurs d’écriture du fichier sont également communiquées.
+5. Les dimensions apparaissent avant les valeurs d’empattement et de cubage, sans répéter le nom de ces deux mesures ; type et couleur sont absents de l’étiquette.
+6. Aucun statut de manutention (Tip, Gerbable ou basculable) n’apparaît dans les étiquettes, l’aperçu ni les commentaires.
+7. Les commentaires sont dans leur propre section en bas ; les commentaires de manutention sont exclus.
+8. Les statuts de basculement et de gerbage sont traités indépendamment ; « ne pas basculer » déclenche un avertissement très visible.
+9. Un contenu long ne déborde pas, n’est pas tronqué silencieusement et déclenche une alerte s’il ne peut tenir de façon lisible.
+10. L’aperçu et le PDF ne présentent ni texte coupé, ni page supplémentaire, ni mise à l’échelle qui change le format A4.
+11. Le `.exe` démarre et génère un PDF sur un poste Windows où Python n’est pas installé.
+12. Les informations du show sont conservées après fermeture et restaurées au prochain lancement.
+13. Un logo PNG ou JPEG choisi est mémorisé et apparaît dans chaque page PDF sans déformer le format A4 ni chevaucher les textes ; un logo invalide ou manquant provoque une erreur explicite.
+14. Un classeur illisible ou non conforme (mauvais onglets, ordre ou en-têtes) provoque un message d’erreur précis et aucune génération ; les erreurs d’écriture du fichier sont également communiquées.
 
 ## 10. Hors périmètre initial
 

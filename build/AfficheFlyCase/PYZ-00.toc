@@ -342,6 +342,10 @@
    'C:\\Users\\jpriam\\OneDrive - THEATRE DU CHATELET\\__Mes Documents '
    'Perso\\__GitHub\\AfficheFlyCase\\afficheflycase\\pdf_labels.py',
    'PYMODULE'),
+  ('afficheflycase.settings',
+   'C:\\Users\\jpriam\\OneDrive - THEATRE DU CHATELET\\__Mes Documents '
+   'Perso\\__GitHub\\AfficheFlyCase\\afficheflycase\\settings.py',
+   'PYMODULE'),
   ('afficheflycase.workbook',
    'C:\\Users\\jpriam\\OneDrive - THEATRE DU CHATELET\\__Mes Documents '
    'Perso\\__GitHub\\AfficheFlyCase\\afficheflycase\\workbook.py',

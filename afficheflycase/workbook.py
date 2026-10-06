@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,6 +38,15 @@ SHEET_HEADERS = {
 }
 
 FLYCASE_ID_PATTERN = re.compile(r"(?<![A-Z0-9])([A-Z]{1,8}\d{1,8})(?![A-Z0-9])", re.IGNORECASE)
+HANDLING_TERM_PATTERN = re.compile(
+    r"\b(?:tip(?:able)?|do\s+not\s+tip|bascul(?:able|er|e)|gerb(?:able|age|er)|empil(?:able|er))\b",
+    re.IGNORECASE,
+)
+COMMENT_PART_SEPARATOR = re.compile(r"[\r\n;,/|]+|\s+[—–-]\s+")
+SUMMARY_ROW_PATTERN = re.compile(
+    r"(?<![A-Z])(?:TOTAL|SOUS[\s-]*TOTAL|SUB[\s-]*TOTAL|GRAND[\s-]*TOTAL)(?![A-Z])",
+    re.IGNORECASE,
+)
 
 
 class WorkbookFormatError(ValueError):
@@ -52,6 +62,30 @@ class MaterialItem:
     source_row: int
 
 
+@dataclass(frozen=True)
+class UnassignedMaterial:
+    material: MaterialItem
+    flycase: str
+    reason: str
+
+    @property
+    def description(self) -> str:
+        parts = [self.material.element or "Matériel non renseigné"]
+        if self.material.quantity:
+            parts.append(f"Qté : {self.material.quantity}")
+        if self.material.spare and self.material.spare != "-":
+            parts.append(f"Spare : {self.material.spare}")
+        if self.material.position:
+            parts.append(f"Position : {self.material.position}")
+        return " — ".join(parts)
+
+
+@dataclass
+class WorkbookImportResult:
+    cases: list[FlyCase]
+    unassigned_materials: list[UnassignedMaterial] = field(default_factory=list)
+
+
 @dataclass
 class FlyCase:
     identifier: str
@@ -62,32 +96,18 @@ class FlyCase:
     height: str
     footprint: str
     volume: str
-    tip: str
-    stackable: str
     comment: str
     source_row: int
     materials: list[MaterialItem] = field(default_factory=list)
 
     @property
     def dimensions(self) -> str:
-        dimensions = [value for value in (self.width, self.length, self.height) if value]
+        dimensions = [
+            _with_unit(value, "cm", r"(?:mm|cm|m|in|po)")
+            for value in (self.width, self.length, self.height)
+            if value
+        ]
         return " × ".join(dimensions) if dimensions else "À vérifier"
-
-    @property
-    def tip_label(self) -> str:
-        if self.tip == "NON":
-            return "NE PAS BASCULER"
-        if self.tip == "OK":
-            return "BASCULABLE"
-        return "STATUT À VÉRIFIER"
-
-    @property
-    def stackable_label(self) -> str:
-        if self.stackable == "OK":
-            return "GERBABLE"
-        if self.stackable == "NON":
-            return "NON GERBABLE"
-        return "STATUT À VÉRIFIER"
 
 
 def _text(value: Any) -> str:
@@ -96,6 +116,30 @@ def _text(value: Any) -> str:
     if isinstance(value, bool):
         return "TRUE" if value else "FALSE"
     return str(value).strip()
+
+
+def _with_unit(value: str, unit: str, accepted_units: str) -> str:
+    value = value.strip()
+    if not value or value == "-":
+        return value
+    if re.search(rf"(?:{accepted_units})\s*$", value, flags=re.IGNORECASE):
+        return value
+    return f"{value} {unit}"
+
+
+def clean_comment(value: str) -> str:
+    """Remove handling-status phrases while keeping unrelated comment fragments."""
+    parts = COMMENT_PART_SEPARATOR.split(value)
+    kept_parts = []
+    for part in parts:
+        normalized = unicodedata.normalize("NFKD", part)
+        normalized = "".join(character for character in normalized if not unicodedata.combining(character))
+        if HANDLING_TERM_PATTERN.search(normalized):
+            continue
+        cleaned = part.strip(" \t\r\n.,;:/|—–-")
+        if cleaned:
+            kept_parts.append(cleaned)
+    return " — ".join(kept_parts)
 
 
 def _normalized_id(value: str) -> str:
@@ -124,6 +168,36 @@ def _cached_value(
             "Ouvrez le classeur dans Excel, recalculez-le, enregistrez-le puis réessayez."
         )
     return value
+
+
+def _direct_cached_value(
+    formulas_sheet: Worksheet, values_sheet: Worksheet, row: int, column: int, sheet_name: str
+) -> Any:
+    formula_cell = formulas_sheet.cell(row=row, column=column)
+    value_cell = values_sheet.cell(row=row, column=column)
+    if isinstance(formula_cell, MergedCell):
+        return None
+    formula = formula_cell.value
+    value = value_cell.value
+    if isinstance(formula, str) and formula.startswith("=") and value is None:
+        raise WorkbookFormatError(
+            f"Formule sans résultat enregistré dans « {sheet_name} »!{formula_cell.coordinate}. "
+            "Ouvrez le classeur dans Excel, recalculez-le, enregistrez-le puis réessayez."
+        )
+    return value
+
+
+def _is_non_data_row(sheet: Worksheet, row: int, first_column: int, headers: dict[int, str]) -> bool:
+    values = [
+        _text(sheet.cell(row=row, column=column).value)
+        for column in range(first_column, max(headers) + 1)
+    ]
+    if any(SUMMARY_ROW_PATTERN.search(value) for value in values):
+        return True
+    return all(
+        values[column - first_column].casefold() == header.casefold()
+        for column, header in headers.items()
+    )
 
 
 def _validate_sheet_names(workbook) -> None:
@@ -158,13 +232,7 @@ def _extract_case_ids(description: str) -> list[str]:
     return [_normalized_id(match) for match in FLYCASE_ID_PATTERN.findall(description.upper())]
 
 
-def _expand_material_rows(sheet: Worksheet, row: int) -> tuple[str, str, str, str, str]:
-    values = [_text(_merged_value(sheet, row, column)) for column in range(2, 7)]
-    element, position, quantity, spare, flycase = values
-    return element, position, quantity, spare, flycase
-
-
-def load_flycases(path: str | Path) -> list[FlyCase]:
+def load_flycases(path: str | Path) -> WorkbookImportResult:
     """Validate and load all fly cases from the first two workbook sheets."""
     workbook_path = Path(path)
     if workbook_path.suffix.casefold() not in {".xlsx", ".xlsm"}:
@@ -197,6 +265,8 @@ def load_flycases(path: str | Path) -> list[FlyCase]:
 
         cases: dict[str, FlyCase] = {}
         for row in range(3, flycase_formula_sheet.max_row + 1):
+            if _is_non_data_row(flycase_formula_sheet, row, 2, SHEET_HEADERS["Listing FlyCase"]):
+                continue
             values = [
                 _cached_value(flycase_formula_sheet, flycase_values_sheet, row, column, "Listing FlyCase")
                 for column in range(2, 13)
@@ -212,18 +282,6 @@ def load_flycases(path: str | Path) -> list[FlyCase]:
                 raise WorkbookFormatError(
                     f"ID en double « {identifier} » dans « Listing FlyCase »!B{row}."
                 )
-            statuses = {}
-            for column, label, raw in (
-                ("J", "Tip", _text(values[8])),
-                ("K", "Gerbable", _text(values[9])),
-            ):
-                status = raw.upper()
-                if status not in {"", "OK", "NON"}:
-                    raise WorkbookFormatError(
-                        f"Valeur « {raw} » non reconnue dans « Listing FlyCase »!{column}{row} "
-                        f"({label}). Valeurs acceptées : OK, NON ou cellule vide."
-                    )
-                statuses[label] = status
             cases[identifier] = FlyCase(
                 identifier=identifier,
                 case_type=_text(values[1]),
@@ -233,9 +291,7 @@ def load_flycases(path: str | Path) -> list[FlyCase]:
                 height=_text(values[5]),
                 footprint=_text(values[6]),
                 volume=_text(values[7]),
-                tip=statuses["Tip"],
-                stackable=statuses["Gerbable"],
-                comment=_text(values[10]),
+                comment=clean_comment(_text(values[10])),
                 source_row=row,
             )
 
@@ -244,44 +300,73 @@ def load_flycases(path: str | Path) -> list[FlyCase]:
                 "Aucune fiche avec un ID n’a été trouvée dans « Listing FlyCase »."
             )
 
+        unassigned_materials: list[UnassignedMaterial] = []
         for row in range(3, material_formula_sheet.max_row + 1):
+            if _is_non_data_row(material_formula_sheet, row, 2, SHEET_HEADERS["Listing Materiel"]):
+                continue
+            direct_values = [
+                _direct_cached_value(
+                    material_formula_sheet, material_values_sheet, row, column, "Listing Materiel"
+                )
+                for column in range(2, 7)
+            ]
+            if not any(_text(value) for value in direct_values):
+                continue
+            if not _text(direct_values[4]):
+                if any(_text(value) for value in direct_values[:4]):
+                    raw = [
+                        _cached_value(
+                            material_formula_sheet, material_values_sheet, row, column, "Listing Materiel"
+                        )
+                        for column in range(2, 7)
+                    ]
+                    element, position, quantity, spare, _ = map(_text, raw)
+                    unassigned_materials.append(
+                        UnassignedMaterial(
+                            material=MaterialItem(element, position, quantity, spare, row),
+                            flycase="",
+                            reason=f"Aucun fly case n’est indiqué en F{row}.",
+                        )
+                    )
+                continue
             raw = [
                 _cached_value(material_formula_sheet, material_values_sheet, row, column, "Listing Materiel")
                 for column in range(2, 7)
             ]
-            if not any(_text(value) for value in raw):
-                continue
-            element, position, quantity, spare, description = _expand_material_rows(
-                material_values_sheet, row
-            )
-            # _expand_material_rows reads cached cells and applies merged values.
-            if not _text(raw[4]):
-                if any(_text(value) for value in raw[:4]):
-                    raise WorkbookFormatError(
-                        f"Fly case manquant dans « Listing Materiel »!F{row}."
-                    )
-                continue
-            identifiers = _extract_case_ids(_text(raw[4]))
+            element, position, quantity, spare, description = map(_text, raw)
+            identifiers = _extract_case_ids(description)
             if not identifiers:
-                raise WorkbookFormatError(
-                    f"Aucun ID de fly case reconnu dans « Listing Materiel »!F{row} "
-                    f"(« {_text(raw[4])} »)."
+                unassigned_materials.append(
+                    UnassignedMaterial(
+                        material=MaterialItem(element, position, quantity, spare, row),
+                        flycase=description,
+                        reason=f"Aucun ID de fly case reconnu en F{row} ({description}).",
+                    )
                 )
+                continue
             material = MaterialItem(
-                element=element or _text(raw[0]),
-                position=position or _text(raw[1]),
-                quantity=quantity or _text(raw[2]),
-                spare=spare or _text(raw[3]),
+                element=element,
+                position=position,
+                quantity=quantity,
+                spare=spare,
                 source_row=row,
             )
-            for identifier in identifiers:
-                if identifier not in cases:
-                    raise WorkbookFormatError(
-                        f"ID « {identifier} » de « Listing Materiel »!F{row} "
-                        "absent de l’onglet « Listing FlyCase »."
+            unknown_ids = [identifier for identifier in dict.fromkeys(identifiers) if identifier not in cases]
+            if unknown_ids:
+                unassigned_materials.append(
+                    UnassignedMaterial(
+                        material=material,
+                        flycase=description,
+                        reason=(
+                            f"ID « {', '.join(unknown_ids)} » de F{row} absent de "
+                            "l’onglet « Listing FlyCase »."
+                        ),
                     )
+                )
+                continue
+            for identifier in dict.fromkeys(identifiers):
                 cases[identifier].materials.append(material)
-        return list(cases.values())
+        return WorkbookImportResult(list(cases.values()), unassigned_materials)
     finally:
         formulas_book.close()
         values_book.close()
