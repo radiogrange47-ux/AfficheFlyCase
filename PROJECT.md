@@ -90,7 +90,7 @@ Les dimensions affichées proviennent des colonnes E à G et conservent les unit
   1. **Première ligne** : ID du fly case en gros caractères à gauche ; pictogrammes d’identification batterie et/ou produit chimique détectés dans le contenu, immédiatement à gauche du logo mémorisé en haut à droite.
   2. **Trois cases** : production, date/période et lieu/salle.
   3. **Bandeau des caractéristiques** : dimensions, puis empattement (m²) et cubage (m³), sans répéter leurs noms. Ne pas afficher le type du contenant ni sa couleur.
-  4. **Zone principale “CONTENU”** : liste des éléments et de leurs quantités/positions.
+  4. **Zone principale “CONTENU”** : liste des éléments et de leurs quantités/positions ; si le fly case n’a aucun contenu associé, laisser la zone vide sans afficher de titre ni de texte de remplacement.
   5. **Section “COMMENTAIRES”** séparée en bas de l’étiquette, au-dessus de l’avertissement éventuel. Les fragments de commentaire relatifs au basculement, au gerbage ou à l’empilement sont retirés.
   6. **Avertissement de manutention** : afficher « NE PAS TIPER » lorsque `Tip` vaut `NON`, « NE PAS GERBER » lorsque `Gerbable` vaut `NON`, ou les deux si les deux conditions sont réunies. Aucun bandeau n’est affiché si aucune valeur n’est `NON`.
 
@@ -113,7 +113,7 @@ Ces valeurs sont des points de départ, non des tailles fixes. La typographie do
 - Format de sortie principal : PDF standard, une étiquette par page, dans l’ordre du tableau ou de la sélection.
 - Chaque page doit déclarer un format A4 paysage. L’impression à « taille réelle » doit respecter ce format ; l’application ne doit pas dépendre de l’imprimante choisie pour composer la page.
 - Fournir un aperçu avant génération et un récapitulatif des avertissements.
-- Le fichier généré doit être nommé avec le nom du show et une date de génération, sans écraser silencieusement un PDF existant.
+- Le nom proposé par défaut au moment de l’enregistrement est `EtiquettesFly_A4_<Nom de la production>.pdf`. Les caractères interdits dans les noms de fichiers Windows sont remplacés et la fenêtre de sauvegarde conserve la confirmation avant écrasement.
 - Les étiquettes doivent rester lisibles en niveaux de gris, à l’exception de l’avertissement rouge qui doit également rester identifiable par son texte et sa typographie.
 
 ## 7. Interface et fonctionnement

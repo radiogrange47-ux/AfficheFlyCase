@@ -353,17 +353,17 @@ def _draw_label(
         if item.position:
             parts.append(f"Position : {_safe(item.position)}")
         material_lines.append(" — ".join(parts) if parts else "Élément à vérifier")
-    body = "<br/>".join(material_lines) if material_lines else "Aucun élément associé dans le listing matériel."
-    _paragraph(
-        pdf,
-        "<b>CONTENU</b><br/>" + body,
-        left + inset,
-        content_top - 8,
-        width - 2 * inset,
-        available_height,
-        font_size=12,
-        min_font_size=10,
-    )
+    if material_lines:
+        _paragraph(
+            pdf,
+            "<b>CONTENU</b><br/>" + "<br/>".join(material_lines),
+            left + inset,
+            content_top - 8,
+            width - 2 * inset,
+            available_height,
+            font_size=12,
+            min_font_size=10,
+        )
 
     pdf.showPage()
 

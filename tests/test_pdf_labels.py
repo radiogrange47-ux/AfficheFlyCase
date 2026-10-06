@@ -7,6 +7,7 @@ import zlib
 
 from PIL import Image
 
+from app import default_pdf_filename
 from afficheflycase.pdf_labels import PAGE_HEIGHT, PAGE_WIDTH, generate_pdf
 from afficheflycase.workbook import FlyCase, MaterialItem, clean_comment
 
@@ -22,6 +23,14 @@ def pdf_text_streams(content: bytes) -> list[bytes]:
 
 
 class PdfLabelTests(unittest.TestCase):
+    def test_default_pdf_filename_uses_production_prefix_and_safe_characters(self):
+        self.assertEqual(default_pdf_filename("La production"), "EtiquettesFly_A4_La production.pdf")
+        self.assertEqual(
+            default_pdf_filename('Show: "Été"/2026'),
+            "EtiquettesFly_A4_Show_ _Été_2026.pdf",
+        )
+        self.assertEqual(default_pdf_filename(" . "), "EtiquettesFly_A4_Production.pdf")
+
     def make_case(self):
         return FlyCase(
             identifier="LX07",
@@ -58,6 +67,16 @@ class PdfLabelTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "lieu"):
                 generate_pdf(Path(directory) / "labels.pdf", [self.make_case()], "Show", "Dates", "")
+
+    def test_empty_material_list_leaves_content_area_blank(self):
+        case = self.make_case()
+        case.materials.clear()
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "labels.pdf"
+            generate_pdf(output, [case], "Show", "Dates", "Lieu")
+            page_text = b"\n".join(pdf_text_streams(output.read_bytes())).lower()
+        self.assertNotIn(b"contenu", page_text)
+        self.assertNotIn(b"aucun element associe", page_text)
 
     def test_label_omits_handling_status_and_cleans_handling_comments(self):
         with tempfile.TemporaryDirectory() as directory:

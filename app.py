@@ -6,7 +6,6 @@ import os
 import re
 import sys
 import tkinter as tk
-from datetime import date
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
@@ -20,6 +19,11 @@ from afficheflycase.settings import (
     store_logo,
 )
 from afficheflycase.workbook import FlyCase, WorkbookFormatError, WorkbookImportResult, load_flycases
+
+
+def default_pdf_filename(production: str) -> str:
+    safe_production = re.sub(r'[<>:"/\\|?*]+', "_", production).strip(" .")
+    return f"EtiquettesFly_A4_{safe_production or 'Production'}.pdf"
 
 
 class AfficheFlyCaseApp:
@@ -302,18 +306,17 @@ class AfficheFlyCaseApp:
             lines.append(case.footprint)
         if case.volume:
             lines.append(case.volume)
-        lines.extend(("", "CONTENU"))
-        for item in case.materials:
-            line = f"• {item.element or 'Élément non renseigné'}"
-            if item.quantity:
-                line += f" — Qté : {item.quantity}"
-            if item.spare and item.spare != "-":
-                line += f" — Spare : {item.spare}"
-            if item.position:
-                line += f" — Position : {item.position}"
-            lines.append(line)
-        if not case.materials:
-            lines.append("Aucun élément associé dans le listing matériel.")
+        if case.materials:
+            lines.extend(("", "CONTENU"))
+            for item in case.materials:
+                line = f"• {item.element or 'Élément non renseigné'}"
+                if item.quantity:
+                    line += f" — Qté : {item.quantity}"
+                if item.spare and item.spare != "-":
+                    line += f" — Spare : {item.spare}"
+                if item.position:
+                    line += f" — Position : {item.position}"
+                lines.append(line)
         if case.comment:
             lines.extend(("", "COMMENTAIRES", case.comment))
         self._set_preview("\n".join(lines))
@@ -346,12 +349,11 @@ class AfficheFlyCaseApp:
             )
             return
 
-        default_name = re.sub(r'[<>:"/\\|?*]+', "_", show).strip(" .") or "Etiquettes_FlyCase"
         destination = filedialog.asksaveasfilename(
             parent=self.root,
             title="Enregistrer les étiquettes PDF",
             initialdir=str(self.workbook_path.parent if self.workbook_path else Path.home()),
-            initialfile=f"{default_name}_{date.today():%Y%m%d}.pdf",
+            initialfile=default_pdf_filename(show),
             defaultextension=".pdf",
             filetypes=[("Document PDF", "*.pdf")],
             confirmoverwrite=True,
