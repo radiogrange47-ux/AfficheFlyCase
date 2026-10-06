@@ -76,6 +76,9 @@ class WorkbookImportTests(unittest.TestCase):
         self.assertEqual(result.cases[0].tip, "NON")
         self.assertEqual(result.cases[0].stackable, "OK")
         self.assertEqual(result.cases[1].stackable, "NON")
+        self.assertEqual(result.cases[0].materials[0].quantity_with_spare, "2")
+        self.assertEqual(result.cases[0].materials[0].other_flycases_text, " (aussi dans LX02)")
+        self.assertEqual(result.cases[1].materials[0].other_flycases_text, " (aussi dans LX01)")
         self.assertEqual(result.cases[0].footprint, "0,7")
         self.assertEqual(result.unassigned_materials, [])
 
@@ -97,6 +100,27 @@ class WorkbookImportTests(unittest.TestCase):
         self.assertEqual(
             clean_comment("Batteries / non gerbable; fragile — tipable"),
             "Batteries — fragile",
+        )
+
+    def test_multiple_flycase_assignments_list_the_other_cases(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "listing.xlsx"
+            make_workbook(path)
+            from openpyxl import load_workbook
+
+            workbook = load_workbook(path)
+            workbook["Listing Materiel"]["F3"] = "LX01 / LX02"
+            workbook.save(path)
+            result = load_flycases(path)
+        row_three_items = [
+            (case.identifier, item)
+            for case in result.cases
+            for item in case.materials
+            if item.source_row == 3
+        ]
+        self.assertEqual(
+            [(identifier, item.other_flycases_text) for identifier, item in row_three_items],
+            [("LX01", " (aussi dans LX02)"), ("LX02", " (aussi dans LX01)")],
         )
 
     def test_rejects_unmatched_material_case_id(self):

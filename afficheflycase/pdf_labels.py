@@ -346,17 +346,16 @@ def _draw_label(
         parts = []
         if item.element:
             parts.append(f"<b>{_safe(item.element)}</b>")
-        if item.quantity:
-            parts.append(f"Qté : {_safe(item.quantity)}")
-        if item.spare and item.spare != "-":
-            parts.append(f"Spare : {_safe(item.spare)}")
+        quantity = item.quantity_with_spare
+        if quantity:
+            parts.append(f"Qté : {_safe(quantity)}{_safe(item.other_flycases_text)}")
         if item.position:
             parts.append(f"Position : {_safe(item.position)}")
         material_lines.append(" — ".join(parts) if parts else "Élément à vérifier")
     if material_lines:
         _paragraph(
             pdf,
-            "<b>CONTENU</b><br/>" + "<br/>".join(material_lines),
+            "<br/>".join(material_lines),
             left + inset,
             content_top - 8,
             width - 2 * inset,

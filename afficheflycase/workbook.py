@@ -60,6 +60,21 @@ class MaterialItem:
     quantity: str
     spare: str
     source_row: int
+    other_flycases: tuple[str, ...] = ()
+
+    @property
+    def other_flycases_text(self) -> str:
+        if not self.other_flycases:
+            return ""
+        return f" (aussi dans {' et '.join(self.other_flycases)})"
+
+    @property
+    def quantity_with_spare(self) -> str:
+        quantity = self.quantity.strip()
+        spare = self.spare.strip()
+        if spare and spare != "-":
+            return f"{quantity}+{spare}" if quantity else spare
+        return quantity
 
 
 @dataclass(frozen=True)
@@ -234,6 +249,23 @@ def _extract_case_ids(description: str) -> list[str]:
     return [_normalized_id(match) for match in FLYCASE_ID_PATTERN.findall(description.upper())]
 
 
+def _material_group_key(sheet: Worksheet, row: int) -> tuple[int, int]:
+    merged_row_ranges = [
+        (merged_range.min_row, merged_range.max_row)
+        for merged_range in sheet.merged_cells.ranges
+        if merged_range.min_col <= 5
+        and merged_range.max_col >= 2
+        and merged_range.min_row <= row <= merged_range.max_row
+        and merged_range.max_row > merged_range.min_row
+    ]
+    if not merged_row_ranges:
+        return row, row
+    return (
+        min(first_row for first_row, _ in merged_row_ranges),
+        max(last_row for _, last_row in merged_row_ranges),
+    )
+
+
 def load_flycases(path: str | Path) -> WorkbookImportResult:
     """Validate and load all fly cases from the first two workbook sheets."""
     workbook_path = Path(path)
@@ -305,6 +337,8 @@ def load_flycases(path: str | Path) -> WorkbookImportResult:
             )
 
         unassigned_materials: list[UnassignedMaterial] = []
+        assigned_materials: dict[tuple[int, int], MaterialItem] = {}
+        assigned_case_ids: dict[tuple[int, int], list[str]] = {}
         for row in range(3, material_formula_sheet.max_row + 1):
             if _is_non_data_row(material_formula_sheet, row, 2, SHEET_HEADERS["Listing Materiel"]):
                 continue
@@ -368,8 +402,29 @@ def load_flycases(path: str | Path) -> WorkbookImportResult:
                     )
                 )
                 continue
-            for identifier in dict.fromkeys(identifiers):
-                cases[identifier].materials.append(material)
+            unique_identifiers = list(dict.fromkeys(identifiers))
+            group_key = _material_group_key(material_formula_sheet, row)
+            assigned_materials.setdefault(group_key, material)
+            grouped_ids = assigned_case_ids.setdefault(group_key, [])
+            for identifier in unique_identifiers:
+                if identifier not in grouped_ids:
+                    grouped_ids.append(identifier)
+
+        for group_key, material in assigned_materials.items():
+            identifiers = assigned_case_ids[group_key]
+            for identifier in identifiers:
+                cases[identifier].materials.append(
+                    MaterialItem(
+                        element=material.element,
+                        position=material.position,
+                        quantity=material.quantity,
+                        spare=material.spare,
+                        source_row=material.source_row,
+                        other_flycases=tuple(
+                            other_id for other_id in identifiers if other_id != identifier
+                        ),
+                    )
+                )
         return WorkbookImportResult(list(cases.values()), unassigned_materials)
     finally:
         formulas_book.close()

@@ -87,6 +87,7 @@ class PdfLabelTests(unittest.TestCase):
         self.assertNotIn(b"gerbable", page_text)
         self.assertNotIn(b"basculable", page_text)
         self.assertNotIn(b"do not tip", page_text)
+        self.assertNotIn(b"contenu", page_text)
         self.assertIn(b"batteries", page_text)
         self.assertIn(b"fragile", page_text)
         self.assertIn(b"0,6 m\\262", page_text)
@@ -113,6 +114,33 @@ class PdfLabelTests(unittest.TestCase):
         self.assertIn(b"/Subtype /Image", content)
         self.assertRegex(streams[0], rb"109\.25 0 0 96 ")
         self.assertRegex(streams[0], rb"192 0 0 96 ")
+
+    def test_lists_other_flycases_next_to_quantity(self):
+        case = self.make_case()
+        case.materials[0] = MaterialItem(
+            "Batterie 24V",
+            "CADREJ (1)",
+            "2",
+            "1",
+            3,
+            other_flycases=("LX08", "LX09"),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "labels.pdf"
+            generate_pdf(output, [case], "Show", "Dates", "Lieu")
+            page_text = b"\n".join(pdf_text_streams(output.read_bytes())).lower()
+        self.assertIn(b"2+1 \\(aussi dans lx08 et lx09\\)", page_text)
+        self.assertNotIn(b"spare", page_text)
+
+    def test_quantity_without_spare_keeps_its_value(self):
+        case = self.make_case()
+        case.materials = [MaterialItem("Batterie 24V", "", "2", "-", 3)]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "labels.pdf"
+            generate_pdf(output, [case], "Show", "Dates", "Lieu")
+            page_text = b"\n".join(pdf_text_streams(output.read_bytes())).lower()
+        self.assertIn(b"qt\\351 : 2", page_text)
+        self.assertNotIn(b"spare", page_text)
 
     def test_shows_warning_when_tip_or_stackability_is_non(self):
         cases = [self.make_case(), self.make_case(), self.make_case()]

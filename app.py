@@ -310,10 +310,9 @@ class AfficheFlyCaseApp:
             lines.extend(("", "CONTENU"))
             for item in case.materials:
                 line = f"• {item.element or 'Élément non renseigné'}"
-                if item.quantity:
-                    line += f" — Qté : {item.quantity}"
-                if item.spare and item.spare != "-":
-                    line += f" — Spare : {item.spare}"
+                quantity = item.quantity_with_spare
+                if quantity:
+                    line += f" — Qté : {quantity}{item.other_flycases_text}"
                 if item.position:
                     line += f" — Position : {item.position}"
                 lines.append(line)

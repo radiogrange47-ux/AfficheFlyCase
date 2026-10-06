@@ -10,7 +10,9 @@ Le nom du show, les dates/période et le lieu/salle sont mémorisés automatique
 
 Sur l’étiquette, l’ID apparaît en très gros sur la première ligne avec le logo en haut à droite. Le logo batterie fourni et/ou un repère chimique sont ajoutés à gauche du logo si le contenu les indique ; le logo batterie est inclus dans l’exécutable et utilise le même cadre que le logo à sa droite, sans déformation. Ces pictogrammes n’indiquent pas une classe réglementaire de danger. La ligne suivante présente trois cases (production, date et lieu), puis les dimensions, l’empattement en m² et le cubage en m³. Un bandeau « NE PAS TIPER » apparaît si la colonne Tip vaut NON et « NE PAS GERBER » si Gerbable vaut NON. Aucun statut positif n’est affiché.
 
-Si un fly case n’a aucun contenu associé, sa zone « CONTENU » reste vide.
+La liste des matériels est affichée sans titre dans sa zone. Si un fly case n’a aucun contenu associé, cette zone reste vide.
+
+Lorsqu’un spare est renseigné, il est ajouté à la quantité sous la forme « Qté : 2+1 ». Si le matériel est aussi affecté à d’autres fly cases, leurs IDs suivent, par exemple « Qté : 2+1 (aussi dans LX02 et LX03) ».
 
 Le classeur doit contenir en première et deuxième position les onglets `Listing Materiel` et `Listing FlyCase`. Les en-têtes attendus sont en ligne 2 ; le détail des colonnes et les règles d’import sont documentés dans [PROJECT.md](PROJECT.md). Un fichier non conforme est refusé avec une erreur indiquant le problème détecté.
 

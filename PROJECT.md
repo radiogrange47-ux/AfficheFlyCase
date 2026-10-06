@@ -43,7 +43,7 @@ Les colonnes B à F doivent être présentes dans cet ordre :
 | E | `SPARE` | Quantité de spare/réserve, si renseignée. |
 | F | `FLYCASE` | Désignation du ou des fly cases associés à l’élément, par exemple `LX07 - Fly Case - Bois - 84 x 70 x 83`. |
 
-Chaque ligne de matériel est associée au fly case (ou aux fly cases) mentionné(s) en colonne F. L’application extrait l’ID du fly case de cette désignation et l’utilise pour faire le rapprochement avec l’onglet `Listing FlyCase`. Si une cellule F contient plusieurs désignations, chacune doit être reconnue et l’élément associé à chacune. Les champs `ELEMENT`, `POSITION`, `QTE` et `SPARE` constituent le contenu de l’étiquette ; une quantité de spare vide ou indiquée par `-` ne doit pas être inventée ni affichée comme quantité disponible.
+Chaque ligne de matériel est associée au fly case (ou aux fly cases) mentionné(s) en colonne F. L’application extrait les ID du fly case de cette désignation et les utilise pour faire le rapprochement avec l’onglet `Listing FlyCase`. Si un même matériel est attribué à plusieurs fly cases, sa quantité est suivie de « (aussi dans <ID> et <ID>…) », indiquant les autres fly cases de l’attribution. Lorsqu’un spare est renseigné, il est accolé à la quantité sous la forme `QTE+SPARE` (par exemple `2+1`) ; il ne donne pas lieu à un libellé séparé. Un spare vide ou indiqué par `-` n’est pas affiché.
 
 Dans le fichier de référence, certaines cellules B à E sont fusionnées verticalement sur plusieurs lignes, tandis que la colonne F contient une désignation de fly case par ligne. La valeur de chaque cellule fusionnée B à E s’applique à **chacune** des lignes couvertes par la fusion : l’import doit la réutiliser pour tous les fly cases correspondants, sans perdre les associations sur les lignes où Excel n’expose qu’une valeur dans la cellule supérieure de la fusion.
 
@@ -90,7 +90,7 @@ Les dimensions affichées proviennent des colonnes E à G et conservent les unit
   1. **Première ligne** : ID du fly case en gros caractères à gauche ; pictogrammes d’identification batterie et/ou produit chimique détectés dans le contenu, immédiatement à gauche du logo mémorisé en haut à droite.
   2. **Trois cases** : production, date/période et lieu/salle.
   3. **Bandeau des caractéristiques** : dimensions, puis empattement (m²) et cubage (m³), sans répéter leurs noms. Ne pas afficher le type du contenant ni sa couleur.
-  4. **Zone principale “CONTENU”** : liste des éléments et de leurs quantités/positions ; si le fly case n’a aucun contenu associé, laisser la zone vide sans afficher de titre ni de texte de remplacement.
+  4. **Zone principale** : liste des éléments et de leurs quantités/positions, sans titre « CONTENU » ; si le fly case n’a aucun contenu associé, laisser la zone vide sans texte de remplacement.
   5. **Section “COMMENTAIRES”** séparée en bas de l’étiquette, au-dessus de l’avertissement éventuel. Les fragments de commentaire relatifs au basculement, au gerbage ou à l’empilement sont retirés.
   6. **Avertissement de manutention** : afficher « NE PAS TIPER » lorsque `Tip` vaut `NON`, « NE PAS GERBER » lorsque `Gerbable` vaut `NON`, ou les deux si les deux conditions sont réunies. Aucun bandeau n’est affiché si aucune valeur n’est `NON`.
 
@@ -138,7 +138,7 @@ Ces valeurs sont des points de départ, non des tailles fixes. La typographie do
 1. L’utilisateur peut sélectionner un fichier Excel conforme au modèle, qui est importé depuis ses deux premiers onglets sans modifier le classeur.
 2. L’ID apparaît en première ligne avec le logo à droite ; production, date et lieu apparaissent chacun dans leur case dédiée.
 3. Pour chaque ligne sélectionnée contenant un fly case valide, le PDF produit exactement une page A4 paysage.
-4. Les éléments de `Listing Materiel` sont associés à la fiche correspondante de `Listing FlyCase` par leur ID ; les valeurs de colonnes B à E fusionnées sont appliquées à chaque ligne fusionnée et aucune association de la colonne F n’est perdue.
+4. Les éléments de `Listing Materiel` sont associés à la fiche correspondante de `Listing FlyCase` par leur ID ; les valeurs de colonnes B à E fusionnées sont appliquées à chaque ligne fusionnée et aucune association de la colonne F n’est perdue. Lorsqu’un même matériel est affecté à plusieurs fly cases, la quantité mentionne également les autres ID.
 5. Les dimensions apparaissent avant les valeurs d’empattement et de cubage, sans répéter le nom de ces deux mesures ; type et couleur sont absents de l’étiquette.
 6. Le logo batterie fourni et/ou le repère chimique apparaît à gauche du logo de l’étiquette lorsque la désignation d’un contenu correspond aux termes détectés ; les ressources nécessaires sont incluses dans l’exécutable et ces pictogrammes ne prétendent pas signaler une classe de danger réglementaire.
 7. Les commentaires sont dans leur propre section en bas ; les commentaires de manutention sont exclus.
